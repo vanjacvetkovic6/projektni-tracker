@@ -1,0 +1,497 @@
+<!DOCTYPE html>
+<html lang="sr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Projektni Tracker — Sales Snap</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --bg:         #F7F6F3;
+  --surface:    #FFFFFF;
+  --border:     #E4E2DC;
+  --text:       #1A1916;
+  --muted:      #6B6860;
+  --accent:     #2A5FD4;
+  --accent-bg:  #EEF3FC;
+  --danger:     #C0392B;
+  --danger-bg:  #FDEDEC;
+  --warn:       #996600;
+  --warn-bg:    #FFF8E1;
+  --success:    #1E7A4A;
+  --success-bg: #E9F7EF;
+  --hold-bg:    #F1EFE8;
+  --radius:     8px;
+}
+body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); font-size: 14px; min-height: 100vh; }
+
+.top-bar { background: var(--surface); border-bottom: 1px solid var(--border); padding: 0 1.5rem; display: flex; align-items: center; justify-content: space-between; height: 54px; position: sticky; top: 0; z-index: 50; }
+.top-bar h1 { font-size: 14px; font-weight: 600; }
+.top-bar .sub { font-size: 12px; color: var(--muted); margin-left: 8px; }
+.sync-row { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--muted); }
+.dot { width: 7px; height: 7px; border-radius: 50%; background: #ccc; flex-shrink: 0; }
+.dot.ok   { background: var(--success); }
+.dot.err  { background: var(--danger); }
+.dot.spin { background: var(--warn); animation: blink 1s infinite; }
+@keyframes blink { 0%,100%{opacity:1}50%{opacity:.3} }
+.btn-refresh { background: none; border: 1px solid var(--border); border-radius: var(--radius); padding: 4px 10px; font-size: 12px; font-family: 'Inter',sans-serif; cursor: pointer; color: var(--muted); }
+.btn-refresh:hover { background: var(--bg); }
+
+.page { max-width: 1400px; margin: 0 auto; padding: 1.25rem 1.5rem; }
+
+.rule-note { font-size: 12px; color: var(--muted); background: var(--hold-bg); border-left: 3px solid var(--danger); padding: 8px 12px; border-radius: 0 var(--radius) var(--radius) 0; margin-bottom: 1.25rem; }
+
+.alert { border-radius: var(--radius); padding: 9px 13px; margin-bottom: .75rem; font-size: 12px; line-height: 1.6; display: none; }
+.alert.show { display: block; }
+.alert.danger { background: var(--danger-bg); color: var(--danger); border: 1px solid #F5C6C2; }
+.alert.warn   { background: var(--warn-bg);   color: var(--warn);   border: 1px solid #F5DFA3; }
+
+.stats { display: grid; grid-template-columns: repeat(5,1fr); gap: 8px; margin-bottom: 1rem; }
+.stat { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 10px 12px; }
+.stat-num { font-size: 22px; font-weight: 600; line-height: 1; }
+.stat-lbl { font-size: 11px; color: var(--muted); margin-top: 3px; }
+.stat.s-red .stat-num { color: var(--danger); }
+.stat.s-amb .stat-num { color: var(--warn); }
+.stat.s-grn .stat-num { color: var(--success); }
+
+.controls { display: flex; gap: 7px; flex-wrap: wrap; margin-bottom: .85rem; align-items: center; }
+.controls input[type=text], .controls select { height: 34px; padding: 0 9px; border: 1px solid var(--border); border-radius: var(--radius); font-family: 'Inter',sans-serif; font-size: 13px; background: var(--surface); color: var(--text); }
+.controls input[type=text] { flex: 1; min-width: 140px; }
+.btn { height: 34px; padding: 0 13px; border-radius: var(--radius); font-family:'Inter',sans-serif; font-size:13px; cursor:pointer; display:inline-flex; align-items:center; gap:5px; border:1px solid var(--border); background:var(--surface); color:var(--text); font-weight:500; }
+.btn:hover { background: var(--bg); }
+.btn-primary { background: var(--accent); color:#fff; border-color: var(--accent); }
+.btn-primary:hover { opacity:.88; background: var(--accent); }
+.save-ind { font-size: 11px; color: var(--muted); }
+.save-ind.saving { color: var(--warn); }
+.save-ind.saved  { color: var(--success); }
+.save-ind.error  { color: var(--danger); }
+
+.tbl-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font-size: 12px; min-width: 1200px; }
+thead th { text-align:left; padding: 8px 9px; font-size:10px; font-weight:600; color:var(--muted); border-bottom:1px solid var(--border); white-space:nowrap; text-transform:uppercase; letter-spacing:.05em; background:var(--bg); }
+thead th .hint { font-size:9px; font-weight:400; color:#aaa; display:block; margin-top:1px; text-transform:none; letter-spacing:0; }
+tbody tr { border-bottom: 1px solid var(--border); }
+tbody tr:last-child { border-bottom: none; }
+tbody tr:hover { background: #FAFAF8; }
+tbody tr.row-late { background: #FEF5F5; }
+tbody tr.row-late:hover { background: #FDEEEC; }
+tbody tr.row-warn { background: #FFFDF0; }
+tbody td { padding: 7px 9px; vertical-align: middle; }
+
+.pname { font-weight: 500; font-size: 13px; line-height: 1.3; }
+
+.ci { border:none; background:transparent; font-family:'Inter',sans-serif; font-size:12px; color:var(--muted); width:100%; padding:2px 3px; border-radius:4px; }
+.ci:hover,.ci:focus { background:var(--bg); outline:none; color:var(--text); }
+.cs { border:none; background:transparent; font-family:'Inter',sans-serif; font-size:12px; color:var(--text); padding:2px 3px; border-radius:4px; cursor:pointer; width:100%; }
+.cs:hover { background:var(--bg); }
+
+.days-late { font-size:10px; color:var(--danger); background:var(--danger-bg); padding:1px 5px; border-radius:999px; margin-top:2px; display:inline-block; }
+.days-warn { font-size:10px; color:var(--warn); background:var(--warn-bg); padding:1px 5px; border-radius:999px; margin-top:2px; display:inline-block; }
+.date-fmt  { font-size:10px; color:#bbb; display:block; margin-top:1px; }
+
+.redmine-link { font-size:11px; color:var(--accent); text-decoration:none; }
+.redmine-link:hover { text-decoration:underline; }
+
+.del-btn { background:none; border:none; cursor:pointer; color:#ccc; padding:3px 5px; border-radius:4px; font-size:14px; line-height:1; }
+.del-btn:hover { color:var(--danger); background:var(--danger-bg); }
+
+.empty { text-align:center; padding:3rem; color:var(--muted); font-size:13px; }
+
+.overlay { position:fixed; inset:0; background:rgba(0,0,0,.38); z-index:200; display:none; align-items:center; justify-content:center; }
+.overlay.open { display:flex; }
+.modal { background:var(--surface); border-radius:12px; padding:1.5rem; width:min(560px,94vw); max-height:90vh; overflow-y:auto; box-shadow:0 8px 32px rgba(0,0,0,.15); }
+.modal h3 { font-size:15px; font-weight:600; margin-bottom:1.1rem; }
+.field { margin-bottom:10px; }
+.field label { display:block; font-size:10px; font-weight:600; color:var(--muted); margin-bottom:3px; text-transform:uppercase; letter-spacing:.05em; }
+.field .hint { font-size:11px; color:#aaa; font-weight:400; text-transform:none; letter-spacing:0; margin-left:6px; }
+.field input,.field select,.field textarea { width:100%; padding:7px 10px; border:1px solid var(--border); border-radius:var(--radius); font-family:'Inter',sans-serif; font-size:13px; background:var(--surface); color:var(--text); }
+.field input:focus,.field select:focus,.field textarea:focus { outline:2px solid var(--accent); outline-offset:-1px; }
+.field textarea { resize:vertical; min-height:56px; }
+.g2 { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+.mfooter { display:flex; gap:8px; justify-content:flex-end; margin-top:1.1rem; padding-top:1rem; border-top:1px solid var(--border); }
+</style>
+</head>
+<body>
+
+<script>
+  // ── ZALEPI SVOJ APPS SCRIPT URL OVDE ──
+  const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbymsw9nPr54SasM91u_bGcPPogZpAYQT6gbqHDvca7T0rVR13AyqrGKVpXIZ_fsufwS/exec";
+</script>
+
+<div class="top-bar">
+  <div style="display:flex;align-items:center">
+    <h1>Projektni Tracker</h1>
+    <span class="sub">Sales Snap — Vanja</span>
+  </div>
+  <div class="sync-row">
+    <div class="dot" id="dot"></div>
+    <span id="sync-lbl">—</span>
+    <button class="btn-refresh" onclick="loadProjects()">↺ Refresh</button>
+  </div>
+</div>
+
+<div class="page">
+
+  <div class="rule-note">
+    Ažurira se minimum jednom nedeljno. Svako predviđeno kašnjenje najavljuje se <strong>Danijeli min. 48h pre roka</strong>.
+  </div>
+
+  <div class="alert danger" id="al-danger"></div>
+  <div class="alert warn"   id="al-warn"></div>
+
+  <div class="stats" id="stats"></div>
+
+  <div class="controls">
+    <input type="text" id="search" placeholder="Pretraži projekte, developera, Redmine...">
+    <select id="fil-st">
+      <option value="">Svi statusi</option>
+      <option value="U toku">🟢 U toku</option>
+      <option value="Kasni">🔴 Kasni</option>
+      <option value="Testiranje">🟡 Testiranje</option>
+      <option value="On hold">⏸️ On hold</option>
+      <option value="Nije počelo">📋 Nije počelo</option>
+      <option value="Završeno">✅ Završeno</option>
+    </select>
+    <select id="fil-dev">
+      <option value="">Svi developeri</option>
+      <option>Stefan</option>
+      <option>Nikola</option>
+      <option>Zlobin</option>
+      <option>Mihajlo</option>
+      <option>Jelena</option>
+    </select>
+    <select id="fil-k">
+      <option value="">Sva kašnjenja</option>
+      <option value="DA">Kasni — DA</option>
+      <option value="upoz">⚠️ Ističe za 48h</option>
+    </select>
+    <span class="save-ind" id="save-ind"></span>
+    <button class="btn btn-primary" onclick="openModal()" style="margin-left:auto">+ Novi projekat</button>
+  </div>
+
+  <div class="tbl-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th style="width:16%">Projekat</th>
+          <th style="width:11%">Zadatak / Deliverable</th>
+          <th style="width:7%">Početak</th>
+          <th style="width:7%">Plan. rok</th>
+          <th style="width:8%">Stvarni rok</th>
+          <th style="width:10%">Status</th>
+          <th style="width:6%">Kašnjenje?<span class="hint">DA = kasni</span></th>
+          <th style="width:8%">Kašnjenje najavljeno?<span class="hint">najavi Danijeli min. 48h pre roka</span></th>
+          <th style="width:10%">Komentar / Bloker</th>
+          <th style="width:8%">Redmine task</th>
+          <th style="width:9%">Developer / Odgovorna osoba</th>
+          <th style="width:3%"></th>
+        </tr>
+      </thead>
+      <tbody id="tbody"></tbody>
+    </table>
+    <div class="empty" id="empty" style="display:none">Nema projekata koji odgovaraju filteru.</div>
+  </div>
+</div>
+
+<!-- Modal -->
+<div class="overlay" id="overlay">
+  <div class="modal">
+    <h3>Novi projekat</h3>
+    <div class="field"><label>Projekat *</label><input id="f-name" type="text" placeholder="npr. Viber statistika u reportima"></div>
+    <div class="field"><label>Zadatak / Deliverable</label><textarea id="f-del" placeholder="Šta konkretno treba biti urađeno..."></textarea></div>
+    <div class="g2">
+      <div class="field"><label>Developer / Odgovorna osoba</label>
+        <select id="f-dev">
+          <option value="">—</option>
+          <option>Stefan</option>
+          <option>Nikola</option>
+          <option>Zlobin</option>
+          <option>Mihajlo</option>
+          <option>Jelena</option>
+          <option>Više developera</option>
+          <option>Vanja</option>
+        </select>
+      </div>
+      <div class="field"><label>Status</label>
+        <select id="f-status">
+          <option value="Nije počelo">📋 Nije počelo</option>
+          <option value="U toku">🟢 U toku</option>
+          <option value="Testiranje">🟡 Testiranje</option>
+          <option value="On hold">⏸️ On hold</option>
+          <option value="Kasni">🔴 Kasni</option>
+          <option value="Završeno">✅ Završeno</option>
+        </select>
+      </div>
+    </div>
+    <div class="g2">
+      <div class="field"><label>Datum početka</label><input id="f-start" type="date"></div>
+      <div class="field"><label>Redmine task <span class="hint">link ili broj</span></label><input id="f-redmine" type="text" placeholder="https://support.m1.rs/issues/..."></div>
+    </div>
+    <div class="g2">
+      <div class="field"><label>Planirani rok</label><input id="f-plan" type="date"></div>
+      <div class="field"><label>Stvarni rok</label><input id="f-stvarni" type="date"></div>
+    </div>
+    <div class="g2">
+      <div class="field">
+        <label>Kašnjenje? <span class="hint">DA = projekat kasni</span></label>
+        <select id="f-kasn"><option value="NE">NE</option><option value="DA">DA</option></select>
+      </div>
+      <div class="field">
+        <label>Kašnjenje najavljeno? <span class="hint">datum kad si najavila Danijeli (min. 48h pre roka)</span></label>
+        <input id="f-najavljeno" type="date">
+      </div>
+    </div>
+    <div class="field"><label>Komentar / Bloker</label><textarea id="f-kom" placeholder="Šta blokira, napomene, kontekst..."></textarea></div>
+    <div class="mfooter">
+      <button class="btn" onclick="closeModal()">Otkaži</button>
+      <button class="btn btn-primary" onclick="saveNew()">Sačuvaj projekat</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const STATUSES = ['Nije počelo','U toku','Testiranje','On hold','Kasni','Završeno'];
+const EMO = {'U toku':'🟢','Završeno':'✅','Kasni':'🔴','On hold':'⏸️','Nije počelo':'📋','Testiranje':'🟡'};
+const DEVS = ['Stefan','Nikola','Zlobin','Mihajlo','Jelena','Više developera','Vanja'];
+
+let projects = [];
+let saveTimer = null;
+let activeUrl = SCRIPT_URL;
+
+const today = (() => { const d = new Date(); d.setHours(0,0,0,0); return d; })();
+
+function syncState(state, msg) {
+  document.getElementById('dot').className = 'dot ' + (state==='ok'?'ok':state==='err'?'err':'spin');
+  document.getElementById('sync-lbl').textContent = msg;
+}
+
+function apiGet(params) {
+  if (!activeUrl) return Promise.reject('Nije podešen Script URL');
+  return fetch(activeUrl + '?' + new URLSearchParams(params).toString(), { method:'GET' }).then(r => r.json());
+}
+
+function apiWrite(params) {
+  if (!activeUrl) return Promise.reject('Nije podešen Script URL');
+  return fetch(activeUrl + '?' + new URLSearchParams(params).toString(), { method:'GET', mode:'no-cors' }).then(() => ({ success:true }));
+}
+
+function loadProjects() {
+  syncState('spin', 'Učitavam...');
+  apiGet({ action:'getAll' })
+    .then(res => {
+      if (res.error) throw new Error(res.error);
+      projects = res.projects || [];
+      syncState('ok', 'Sinhronizovano — ' + new Date().toLocaleTimeString('sr-RS',{hour:'2-digit',minute:'2-digit'}));
+      render();
+    })
+    .catch(err => { syncState('err', 'Greška pri učitavanju'); console.error(err); });
+}
+
+function pd(s) { if(!s) return null; const d=new Date(s); d.setHours(0,0,0,0); return isNaN(d)?null:d; }
+function fd(s) { const d=pd(s); return d ? d.toLocaleDateString('sr-RS',{day:'2-digit',month:'2-digit',year:'2-digit'}) : ''; }
+function daysTo(p) { const rok=pd(p.plan); if(!rok||p.status==='Završeno') return null; return Math.round((rok-today)/86400000); }
+function isWarn(p) { const d=daysTo(p); return d!==null && d>=0 && d<=2 && p.kasn!=='DA'; }
+
+function renderStats() {
+  const total = projects.length;
+  const kasni = projects.filter(p => p.status==='Kasni'||p.kasn==='DA').length;
+  const warn  = projects.filter(isWarn).length;
+  const done  = projects.filter(p => p.status==='Završeno').length;
+  const noDan = projects.filter(p => p.kasn==='DA' && !p.najavljeno).length;
+
+  document.getElementById('stats').innerHTML = `
+    <div class="stat"><div class="stat-num">${total}</div><div class="stat-lbl">Projekata ukupno</div></div>
+    <div class="stat s-red"><div class="stat-num">${kasni}</div><div class="stat-lbl">Kasni</div></div>
+    <div class="stat s-amb"><div class="stat-num">${warn}</div><div class="stat-lbl">Ističe za 48h</div></div>
+    <div class="stat s-grn"><div class="stat-num">${done}</div><div class="stat-lbl">Završeno</div></div>
+    <div class="stat s-red"><div class="stat-num">${noDan}</div><div class="stat-lbl">Kasni — nije najavljeno</div></div>
+  `;
+
+  const danger=[], warnM=[];
+  if (noDan>0) danger.push(`🔴 ${noDan} projekat(a) kasni, a kašnjenje nije najavljeno Danijeli — popuni datum obaveštenja.`);
+  if (warn>0)  warnM.push(`⚠️ ${warn} projekat(a) ističe za manje od 48h — proveri da li je Danijela obaveštena.`);
+
+  const ad=document.getElementById('al-danger'), aw=document.getElementById('al-warn');
+  ad.innerHTML=danger.join('<br>'); ad.className='alert danger'+(danger.length?' show':'');
+  aw.innerHTML=warnM.join('<br>');  aw.className='alert warn'+(warnM.length?' show':'');
+}
+
+function setInd(cls, txt) {
+  const el=document.getElementById('save-ind');
+  el.className='save-ind '+cls; el.textContent=txt;
+  if(cls==='saved') setTimeout(()=>{el.textContent='';el.className='save-ind';},2500);
+}
+
+function schedSave(p) {
+  setInd('saving','Čuvam...');
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(() => {
+    apiWrite({ action:'update', id:p.id, name:p.name, del:p.del, start:p.start,
+      plan:p.plan, stvarni:p.stvarni, status:p.status, kasn:p.kasn,
+      najavljeno:p.najavljeno, kom:p.kom, redmine:p.redmine, dev:p.dev })
+      .then(()=>setInd('saved','✓ Sačuvano'))
+      .catch(()=>setInd('error','⚠ Greška'));
+  }, 900);
+}
+
+function upd(id, field, val) {
+  const p=projects.find(x=>x.id==id);
+  if(!p) return;
+  p[field]=val;
+  renderStats();
+  schedSave(p);
+}
+
+function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+function render() {
+  const search = document.getElementById('search').value.toLowerCase();
+  const fSt    = document.getElementById('fil-st').value;
+  const fDev   = document.getElementById('fil-dev').value;
+  const fK     = document.getElementById('fil-k').value;
+
+  const filtered = projects.filter(p => {
+    if (search && ![p.name,p.del,p.kom,p.redmine,p.dev].some(v=>(v||'').toLowerCase().includes(search))) return false;
+    if (fSt  && p.status!==fSt) return false;
+    if (fDev && !(p.dev||'').includes(fDev)) return false;
+    if (fK==='DA'   && p.kasn!=='DA') return false;
+    if (fK==='upoz' && !isWarn(p)) return false;
+    return true;
+  });
+
+  const tbody=document.getElementById('tbody');
+  tbody.innerHTML='';
+  document.getElementById('empty').style.display=filtered.length?'none':'block';
+
+  filtered.forEach(p => {
+    const d=daysTo(p), warn=isWarn(p);
+    const rowCls=(p.status==='Kasni'||p.kasn==='DA')?'row-late':warn?'row-warn':'';
+
+    let rokNote='';
+    if(d!==null){ if(d<0) rokNote=`<span class="days-late">${Math.abs(d)}d kasni</span>`; else if(d<=2) rokNote=`<span class="days-warn">za ${d}d ⚠️</span>`; }
+
+    // Redmine — ako je link prikaži klikabilno, ako je broj napravi link
+    let redmineCell='<span style="color:#ccc">—</span>';
+    if(p.redmine){
+      const val=esc(p.redmine);
+      if(p.redmine.startsWith('http')){
+        const num=p.redmine.match(/\/(\d+)/);
+        redmineCell=`<a class="redmine-link" href="${val}" target="_blank">${num?'#'+num[1]:val}</a>`;
+      } else {
+        redmineCell=`<span style="font-size:12px">${val}</span>`;
+      }
+    }
+
+    const devOptions=DEVS.map(s=>`<option value="${s}" ${s===p.dev?'selected':''}>${s}</option>`).join('');
+
+    const tr=document.createElement('tr');
+    tr.className=rowCls;
+    tr.innerHTML=`
+      <td><div class="pname">${esc(p.name)}</div></td>
+      <td><input class="ci" type="text" value="${esc(p.del)}" placeholder="—" onchange="upd('${p.id}','del',this.value)"></td>
+      <td>
+        <input class="ci" type="date" value="${p.start||''}" onchange="upd('${p.id}','start',this.value)">
+        <span class="date-fmt">${fd(p.start)}</span>
+      </td>
+      <td>
+        <input class="ci" type="date" value="${p.plan||''}" onchange="upd('${p.id}','plan',this.value)">
+        <span class="date-fmt">${fd(p.plan)}</span>
+        ${rokNote}
+      </td>
+      <td>
+        <input class="ci" type="date" value="${p.stvarni||''}" onchange="upd('${p.id}','stvarni',this.value)">
+        <span class="date-fmt">${fd(p.stvarni)}</span>
+      </td>
+      <td>
+        <select class="cs" onchange="upd('${p.id}','status',this.value)">
+          ${STATUSES.map(s=>`<option value="${s}" ${s===p.status?'selected':''}>${EMO[s]} ${s}</option>`).join('')}
+        </select>
+      </td>
+      <td>
+        <select class="cs" onchange="upd('${p.id}','kasn',this.value)">
+          <option value="NE" ${p.kasn==='NE'?'selected':''}>NE</option>
+          <option value="DA"  ${p.kasn==='DA' ?'selected':''}>DA</option>
+        </select>
+      </td>
+      <td>
+        <input class="ci" type="date" value="${p.najavljeno||''}" title="Datum kad je Danijela obaveštena o kašnjenju (min. 48h pre roka)" onchange="upd('${p.id}','najavljeno',this.value)">
+        <span class="date-fmt">${fd(p.najavljeno)}</span>
+      </td>
+      <td><input class="ci" type="text" value="${esc(p.kom)}" placeholder="bloker, napomena..." onchange="upd('${p.id}','kom',this.value)"></td>
+      <td>
+        <input class="ci" type="text" value="${esc(p.redmine)}" placeholder="link ili #broj" onchange="upd('${p.id}','redmine',this.value)">
+        ${p.redmine && p.redmine.startsWith('http') ? `<a class="redmine-link" href="${esc(p.redmine)}" target="_blank">otvori ↗</a>` : ''}
+      </td>
+      <td>
+        <select class="cs" onchange="upd('${p.id}','dev',this.value)">
+          <option value="">—</option>
+          ${devOptions}
+        </select>
+      </td>
+      <td><button class="del-btn" onclick="delProj('${p.id}')" title="Ukloni">✕</button></td>
+    `;
+    tbody.appendChild(tr);
+  });
+
+  renderStats();
+}
+
+function delProj(id) {
+  if(!confirm('Ukloniti ovaj projekat iz trackera i Sheets-a?')) return;
+  projects=projects.filter(x=>x.id!=id);
+  render();
+  apiWrite({ action:'delete', id });
+}
+
+function openModal()  { document.getElementById('overlay').classList.add('open'); document.getElementById('f-name').focus(); }
+function closeModal() {
+  document.getElementById('overlay').classList.remove('open');
+  ['f-name','f-del','f-start','f-plan','f-stvarni','f-najavljeno','f-kom','f-redmine'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('f-status').selectedIndex=0;
+  document.getElementById('f-kasn').selectedIndex=0;
+  document.getElementById('f-dev').selectedIndex=0;
+}
+
+function saveNew() {
+  const name=document.getElementById('f-name').value.trim();
+  if(!name){alert('Unesi naziv projekta.');return;}
+
+  const tempId='tmp_'+Date.now();
+  const p={
+    id:tempId, name,
+    del:      document.getElementById('f-del').value.trim(),
+    start:    document.getElementById('f-start').value,
+    plan:     document.getElementById('f-plan').value,
+    stvarni:  document.getElementById('f-stvarni').value,
+    status:   document.getElementById('f-status').value,
+    kasn:     document.getElementById('f-kasn').value,
+    najavljeno: document.getElementById('f-najavljeno').value,
+    kom:      document.getElementById('f-kom').value.trim(),
+    redmine:  document.getElementById('f-redmine').value.trim(),
+    dev:      document.getElementById('f-dev').value,
+  };
+
+  projects.push(p);
+  render();
+  closeModal();
+  setInd('saving','Čuvam...');
+
+  apiGet({ action:'save', ...p })
+    .then(res => {
+      if(res&&res.id){ const idx=projects.findIndex(x=>x.id===tempId); if(idx!==-1) projects[idx].id=res.id; }
+      setInd('saved','✓ Sačuvano u Sheets');
+    })
+    .catch(()=>setInd('saved','✓ Sačuvano'));
+}
+
+document.getElementById('search').addEventListener('input', render);
+document.getElementById('fil-st').addEventListener('change', render);
+document.getElementById('fil-dev').addEventListener('change', render);
+document.getElementById('fil-k').addEventListener('change', render);
+document.addEventListener('keydown', e=>{ if(e.key==='Escape') closeModal(); });
+
+if(activeUrl) { loadProjects(); } else { syncState('err','URL nije podešen — dodaj SCRIPT_URL u HTML'); renderStats(); render(); }
+</script>
+</body>
+</html>
