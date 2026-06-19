@@ -80,10 +80,12 @@ tbody tr.row-warn { background: #FFFDF0; }
 tbody td { padding: 7px 9px; vertical-align: middle; }
 
 .pname { font-weight: 500; font-size: 13px; line-height: 1.3; }
+.ci-area { border:none; background:transparent; font-family:'Inter',sans-serif; font-size:12px; color:var(--muted); width:100%; padding:2px 3px; border-radius:4px; resize:none; overflow:hidden; line-height:1.4; min-height:22px; }
+.ci-area:hover,.ci-area:focus { background:var(--bg); outline:none; color:var(--text); }
 
 .ci { border:none; background:transparent; font-family:'Inter',sans-serif; font-size:12px; color:var(--muted); width:100%; padding:2px 3px; border-radius:4px; }
 .ci:hover,.ci:focus { background:var(--bg); outline:none; color:var(--text); }
-.cs { border:none; background:transparent; font-family:'Inter',sans-serif; font-size:12px; color:var(--text); padding:2px 3px; border-radius:4px; cursor:pointer; width:100%; }
+.cs { border:none; background:transparent; font-family:'Inter',sans-serif; font-size:12px; color:var(--text); padding:2px 3px; border-radius:4px; cursor:pointer; width:100%; min-width:90px; }
 .cs:hover { background:var(--bg); }
 
 .days-late { font-size:10px; color:var(--danger); background:var(--danger-bg); padding:1px 5px; border-radius:999px; margin-top:2px; display:inline-block; }
@@ -154,12 +156,13 @@ tbody td { padding: 7px 9px; vertical-align: middle; }
       <option value="Završeno">✅ Završeno</option>
     </select>
     <select id="fil-dev">
-      <option value="">Svi developeri</option>
+      <option value="">Odgovorne osobe</option>
       <option>Stefan</option>
       <option>Nikola</option>
       <option>Zlobin</option>
       <option>Mihajlo</option>
       <option>Jelena</option>
+      <option>Vanja</option>
     </select>
     <select id="fil-k">
       <option value="">Sva kašnjenja</option>
@@ -174,17 +177,17 @@ tbody td { padding: 7px 9px; vertical-align: middle; }
     <table>
       <thead>
         <tr>
-          <th style="width:16%">Projekat</th>
-          <th style="width:11%">Zadatak / Deliverable</th>
-          <th style="width:7%">Početak</th>
-          <th style="width:7%">Plan. rok</th>
-          <th style="width:8%">Stvarni rok</th>
-          <th style="width:10%">Status</th>
+          <th style="width:13%">Projekat</th>
+          <th style="width:13%">Zadatak / Deliverable</th>
+          <th style="width:6%">Početak</th>
+          <th style="width:6%">Plan. rok</th>
+          <th style="width:6%">Stvarni rok</th>
+          <th style="width:11%">Status</th>
           <th style="width:6%">Kašnjenje?<span class="hint">DA = kasni</span></th>
-          <th style="width:8%">Kašnjenje najavljeno?<span class="hint">najavi Danijeli min. 48h pre roka</span></th>
-          <th style="width:10%">Komentar / Bloker</th>
-          <th style="width:8%">Redmine task</th>
-          <th style="width:9%">Developer / Odgovorna osoba</th>
+          <th style="width:9%">Kašnjenje najavljeno?<span class="hint">najavi Danijeli min. 48h pre roka</span></th>
+          <th style="width:12%">Komentar / Bloker</th>
+          <th style="width:7%">Redmine task</th>
+          <th style="width:8%">Developer / Odgovorna osoba</th>
           <th style="width:3%"></th>
         </tr>
       </thead>
@@ -389,7 +392,7 @@ function render() {
     tr.className=rowCls;
     tr.innerHTML=`
       <td><div class="pname">${esc(p.name)}</div></td>
-      <td><input class="ci" type="text" value="${esc(p.del)}" placeholder="—" onchange="upd('${p.id}','del',this.value)"></td>
+      <td><textarea class="ci-area" placeholder="—" onchange="upd('${p.id}','del',this.value)" oninput="autoResize(this)">${esc(p.del)}</textarea></td>
       <td>
         <input class="ci" type="date" value="${p.start||''}" onchange="upd('${p.id}','start',this.value)">
         <span class="date-fmt">${fd(p.start)}</span>
@@ -418,7 +421,7 @@ function render() {
         <input class="ci" type="date" value="${p.najavljeno||''}" title="Datum kad je Danijela obaveštena o kašnjenju (min. 48h pre roka)" onchange="upd('${p.id}','najavljeno',this.value)">
         <span class="date-fmt">${fd(p.najavljeno)}</span>
       </td>
-      <td><input class="ci" type="text" value="${esc(p.kom)}" placeholder="bloker, napomena..." onchange="upd('${p.id}','kom',this.value)"></td>
+      <td><textarea class="ci-area" placeholder="bloker, napomena..." onchange="upd('${p.id}','kom',this.value)" oninput="autoResize(this)">${esc(p.kom)}</textarea></td>
       <td>
         <input class="ci" type="text" value="${esc(p.redmine)}" placeholder="link ili #broj" onchange="upd('${p.id}','redmine',this.value)">
         ${p.redmine && p.redmine.startsWith('http') ? `<a class="redmine-link" href="${esc(p.redmine)}" target="_blank">otvori ↗</a>` : ''}
@@ -435,6 +438,7 @@ function render() {
   });
 
   renderStats();
+  document.querySelectorAll('.ci-area').forEach(autoResize);
 }
 
 function delProj(id) {
@@ -484,6 +488,8 @@ function saveNew() {
     })
     .catch(()=>setInd('saved','✓ Sačuvano'));
 }
+
+function autoResize(el) { el.style.height = 'auto'; el.style.height = el.scrollHeight + 'px'; }
 
 document.getElementById('search').addEventListener('input', render);
 document.getElementById('fil-st').addEventListener('change', render);
